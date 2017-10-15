@@ -75,7 +75,34 @@ module Dyndnsd
       user = env["REMOTE_USER"]
 
       hostnames.each do |hostname|
-        return @responder.response_for_error(:host_forbidden) if not @users[user]['hosts'].include? hostname
+        pass = false
+
+        @users[user]['hosts'].each do |allowed_hostname|
+          if allowed_hostname.include?('*')
+            ahost = allowed_hostname.chomp(@domain).split('.')
+            rhost = hostname.chomp(@domain).split('.')
+
+            # compare each requested domain element with allowed hostname
+            if ahost.length == rhost.length
+              pass = true
+
+              ahost.zip(rhost).each do |a, r|
+                if a == '*'
+                  next
+                elsif a != r
+                  pass = false
+                  break
+                end
+              end
+            end
+          elsif hostname == allowed_hostname
+            pass = true
+          end
+
+          break if pass
+        end
+
+        return @responder.response_for_error(:host_forbidden) unless pass
       end
 
       myip = nil
