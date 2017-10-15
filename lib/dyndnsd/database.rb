@@ -1,5 +1,6 @@
 
 require 'forwardable'
+require 'tempfile'
 
 module Dyndnsd
   class Database
@@ -21,8 +22,18 @@ module Dyndnsd
     end
     
     def save
-      File.open(@db_file, 'w') { |f| JSON.dump(@db, f) }
-      @db_hash = @db.hash
+      f = Tempfile.new(File.basename(@db_file+'.'), File.dirname(@db_file))
+
+      begin
+        JSON.dump(@db, f)
+        f.close
+        File.rename(f.path, @db_file)
+
+        @db_hash = @db.hash
+      rescue
+        f.close!
+        raise
+      end
     end
     
     def changed?
