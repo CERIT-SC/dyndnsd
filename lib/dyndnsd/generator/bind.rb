@@ -5,7 +5,13 @@ module Dyndnsd
       def initialize(domain, config)
         @domain = domain
         @ttl = config['ttl']
-        @dns = config['dns']
+        @soa_dns = config['soa_dns']
+        if config['dns']
+          @dns = [config['dns']].flatten
+        else
+          @dns = [@soa_dns]
+        end
+        @ip = config['ip']
         @email_addr = config['email_addr']
         @additional_zone_content = config['additional_zone_content']
       end
@@ -15,8 +21,11 @@ module Dyndnsd
         out << "$TTL #{@ttl}"
         out << "$ORIGIN #{@domain}."
         out << ""
-        out << "@ IN SOA #{@dns} #{@email_addr} ( #{zone['serial']} 3h 5m 1w 1h )"
-        out << "@ IN NS #{@dns}"
+        out << "@ IN SOA #{@soa_dns} #{@email_addr} ( #{zone['serial']} 3h 5m 1w 1h )"
+        @dns.each do |ns|
+          out << "@ IN NS #{ns}"
+        end
+        out << "@ IN A #{@ip}" if @ip
         out << ""
         zone['hosts'].each do |hostname,ips|
           (ips.is_a?(Array) ? ips : [ips]).each do |ip|
