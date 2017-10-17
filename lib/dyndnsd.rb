@@ -107,7 +107,7 @@ module Dyndnsd
 
       myip = nil
 
-      if params.has_key?("myip6")
+      if params.has_key?("myip") and params.has_key?("myip6")
         # require presence of myip parameter as valid IPAddr (v4) and valid myip6
         return @responder.response_for_error(:host_forbidden) if not params["myip"]
         begin
@@ -121,24 +121,20 @@ module Dyndnsd
         end
       else
         # fallback value, always present
-        myip = env["REMOTE_ADDR"]
-
-        # check whether X-Real-IP header has valid IPAddr
-        if env.has_key?("HTTP_X_REAL_IP")
-          begin
-            IPAddr.new(env["HTTP_X_REAL_IP"])
-            myip = env["HTTP_X_REAL_IP"]
-          rescue ArgumentError
-          end
+        if params.has_key?("myip")
+          myip = params["myip"]
+        elsif env.has_key?("HTTP_X_REAL_IP")
+          myip = env["HTTP_X_REAL_IP"]
+        elsif env.has_key?("HTTP_X_FORWARDED_FOR")
+          myip = env["HTTP_X_FORWARDED_FOR"]
+        elsif env.has_key?("REMOTE_ADDR")
+          myip = env["REMOTE_ADDR"]
         end
 
-        # check whether myip parameter has valid IPAddr
-        if params.has_key?("myip")
-          begin
-            IPAddr.new(params["myip"])
-            myip = params["myip"]
-          rescue ArgumentError
-          end
+        begin
+          IPAddr.new(myip)
+        rescue ArgumentError
+          return @responder.response_for_error(:host_forbidden)
         end
       end
 
