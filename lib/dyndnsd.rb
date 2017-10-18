@@ -106,6 +106,7 @@ module Dyndnsd
       end
 
       myip = nil
+      off = params.has_key?("offline") and params["offline"]=~/^(yes|true|1)$/i
 
       if params.has_key?("myip") and params.has_key?("myip6")
         # require presence of myip parameter as valid IPAddr (v4) and valid myip6
@@ -139,11 +140,19 @@ module Dyndnsd
       end
 
       Metriks.meter('requests.valid').mark
-      Dyndnsd.logger.info "Request to update #{hostnames} to #{myip} for user #{user}"
+      if off
+        Dyndnsd.logger.info "Request to offline #{hostnames} for user #{user}"
+      else
+        Dyndnsd.logger.info "Request to update #{hostnames} to #{myip} for user #{user}"
+      end
 
       changes = []
       hostnames.each do |hostname|
-        if (not @db['hosts'].include? hostname) or (@db['hosts'][hostname] != myip)
+        if off and @db['hosts'].include? hostname
+          changes << :good
+          @db['hosts'].delete(hostname)
+          Metriks.meter('requests.good').mark
+        elsif (not off) and ((not @db['hosts'].include? hostname) or (@db['hosts'][hostname] != myip))
           changes << :good
           @db['hosts'][hostname] = myip
           Metriks.meter('requests.good').mark
@@ -161,7 +170,7 @@ module Dyndnsd
         Metriks.meter('updates.committed').mark
       end
 
-      @responder.response_for_changes(changes, myip)
+      @responder.response_for_changes(changes, off ? '' : myip)
     end
 
     def self.run!
