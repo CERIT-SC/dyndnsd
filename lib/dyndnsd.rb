@@ -106,7 +106,7 @@ module Dyndnsd
       end
 
       myip = nil
-      off = params.has_key?("offline") and params["offline"]=~/^(yes|true|1)$/i
+      off = (params.has_key?("offline") and params["offline"]=~/^(yes|true|1)$/i)
 
       if params.has_key?("myip") and params.has_key?("myip6")
         # require presence of myip parameter as valid IPAddr (v4) and valid myip6
@@ -233,7 +233,7 @@ module Dyndnsd
       # configure rack
       app = Daemon.new(config, db, updater, responder)
       app = Rack::Auth::Basic.new(app, "DynDNS") do |user,pass|
-        allow = (config['users'].has_key? user) and (config['users'][user]['password'] == pass)
+        allow = ((config['users'].has_key? user) and (config['users'][user]['password'] == pass))
         if not allow
           Dyndnsd.logger.warn "Login failed for #{user}"
           Metriks.meter('requests.auth_failed').mark
