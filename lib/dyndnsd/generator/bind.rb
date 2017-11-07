@@ -25,7 +25,13 @@ module Dyndnsd
         @dns.each do |ns|
           out << "@ IN NS #{ns}"
         end
-        out << "@ IN A #{@ip}" if @ip
+        if @ip
+          (@ip.is_a?(Array) ? @ip : [@ip]).each do |ip|
+            ip = IPAddr.new(ip).native
+            type = ip.ipv6? ? "AAAA" : "A"
+            out << "@ IN #{type} #{ip}"
+          end
+        end
         out << ""
         zone['hosts'].each do |hostname,ips|
           (ips.is_a?(Array) ? ips : [ips]).each do |ip|
