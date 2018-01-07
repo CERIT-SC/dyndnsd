@@ -174,22 +174,45 @@ module Dyndnsd
     end
 
     def self.run!
-      if ARGV.length != 1
-        puts "Usage: dyndnsd config_file"
-        exit 1
-      end
-
-      config_file = ARGV[0]
-
-      if not File.file?(config_file)
-        puts "Config file not found!"
+      if ARGV.length < 1
+        puts "Usage: dyndnsd config_file [config_file ...]"
+        puts ""
+        puts "(latter specified configuration files replace the configured"
+        puts "options of former files; only the users section is merged on"
+        puts "user level, but still the latter specified user completely"
+        puts "replaces former specified user)"
         exit 1
       end
 
       puts "DynDNSd version #{Dyndnsd::VERSION}"
-      puts "Using config file #{config_file}"
 
-      config = YAML::load(File.open(config_file, 'r') { |f| f.read })
+      config = {}
+
+      ARGV.each do |config_file|
+        puts "Using config file #{config_file}"
+
+        if not File.file?(config_file)
+          puts "Config file not found!"
+          exit 1
+        end
+
+        yaml_config = YAML::load(File.open(config_file, 'r') { |f| f.read })
+
+        if yaml_config.nil?
+          puts "Configuration file is empty"
+          next
+        elsif ! yaml_config
+          puts "Invalid configuration file"
+          exit 1
+        end
+
+        # Subsequent config files replaces options from previous,
+        # only the users hashes are merged by user. For duplicate
+        # user entries, the latter config files win.
+        config.merge!(yaml_config) { |key, oldval, newval|
+          key == 'users' ? oldval.merge(newval) : newval
+        }
+      end
 
       if config['logfile']
         Dyndnsd.logger = Logger.new(config['logfile'])
