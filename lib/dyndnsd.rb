@@ -55,7 +55,7 @@ module Dyndnsd
       return false if hostname.length < @domain.length + 2
       return false if not hostname.end_with?(@domain)
       name = hostname.chomp(@domain)
-      return false if not name.match(/^[\.a-zA-Z0-9-]+\.$/)
+      return false if not name.match(/\A[a-z0-9-]+\.([\.a-z0-9_-]+\.)?\z/i)
       true
     end
 
