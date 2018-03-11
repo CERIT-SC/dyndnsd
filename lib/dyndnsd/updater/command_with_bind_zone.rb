@@ -1,3 +1,4 @@
+require 'tempfile'
 
 module Dyndnsd
   module Updater
@@ -10,7 +11,20 @@ module Dyndnsd
       
       def update(zone)
         # write zone file in bind syntax
-        File.open(@zone_file, 'w') { |f| f.write(@generator.generate(zone)) }
+        begin
+          f = Tempfile.new(File.basename(@zone_file)+'.', File.dirname(@zone_file))
+          f.write(@generator.generate(zone))
+          f.flush
+          f.close
+
+          File.rename(f.path, @zone_file)
+        rescue
+          File.open(@zone_file, 'w') { |f|
+            f.write(@generator.generate(zone))
+            f.flush
+          }
+        end
+
         # call user-defined command
         pid = fork do
           exec @command

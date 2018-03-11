@@ -42,7 +42,9 @@ module Dyndnsd
       @db.load
       @db['serial'] ||= 1
       @db['hosts'] ||= {}
-      (@db.save; update) if @db.changed?
+      @db.save if @db.changed?
+
+      update
     end
 
     def update
